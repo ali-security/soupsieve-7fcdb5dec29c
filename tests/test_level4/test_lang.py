@@ -1,5 +1,6 @@
 """Test language selectors."""
 from .. import util
+import soupsieve as sv
 
 
 class TestLang(util.TestCase):
@@ -132,6 +133,26 @@ class TestLang(util.TestCase):
             ['1', '2', '3', '4', '5', '6'],
             flags=util.HTML
         )
+
+    def test_language_quoted_with_escaped_newline_variants(self):
+        """Test language (quoted) with escaped carriage return, form feed, and carriage return/line feed."""
+
+        for newline in ('\r', '\f', '\r\n'):
+            self.assert_selector(
+                self.MARKUP,
+                "p:lang('de-\\" + newline + "DE')",
+                ['1', '2', '3', '4', '5', '6'],
+                flags=util.HTML
+            )
+
+    def test_language_unclosed_quote(self):
+        """Test language with an unclosed quoted value fails for syntax error, not timeout error."""
+
+        for quote in ('"', "'"):
+            with self.assertRaises(sv.SelectorSyntaxError):
+                self.compile_with_timeout('p:lang(' + quote + ('x' * 300))
+            with self.assertRaises(sv.SelectorSyntaxError):
+                self.compile_with_timeout('p:lang(' + quote + ('\\\f' * 300))
 
     def test_wildcard_at_start_quoted(self):
         """Test language with wildcard at start (quoted)."""

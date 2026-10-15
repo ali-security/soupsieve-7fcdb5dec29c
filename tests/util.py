@@ -2,6 +2,7 @@
 import unittest
 import bs4
 import textwrap
+import signal
 import soupsieve as sv
 import pytest
 
@@ -102,6 +103,32 @@ class TestCase(unittest.TestCase):
         print('----Running Assert Test----')
         with self.assertRaises(exception):
             self.compile_pattern(pattern, namespaces=namespace, custom=custom)
+
+    def compile_with_timeout(self, pattern, timeout=3, **kwargs):
+        """
+        Compile pattern, failing if it does not complete within `timeout` seconds.
+
+        Used to ensure malformed patterns are rejected quickly and do not trigger
+        catastrophic backtracking in the parser's regular expressions. `SIGALRM`
+        is not available on all platforms (e.g. Windows), there the pattern is
+        simply compiled.
+        """
+
+        if not hasattr(signal, 'SIGALRM'):
+            return sv.compile(pattern, **kwargs)
+
+        def timeout_handler(signum, frame):
+            raise TimeoutError
+
+        previous = signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(timeout)
+        try:
+            return sv.compile(pattern, **kwargs)
+        except TimeoutError:
+            self.fail('Compiling the pattern timed out after {} seconds'.format(timeout))
+        finally:
+            signal.alarm(0)
+            signal.signal(signal.SIGALRM, previous)
 
     def assert_selector(self, markup, selectors, expected_ids, namespaces={}, custom=None, flags=0):
         """Assert selector."""

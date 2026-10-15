@@ -307,3 +307,16 @@ class TestSoupContains(util.TestCase):
             # Verify some things
             self.assertTrue(len(w) == 1)
             self.assertTrue(issubclass(w[-1].category, FutureWarning))
+
+    def test_contains_unclosed_quote(self):
+        """Test contains with an unclosed quoted value fails for syntax error, not timeout error."""
+
+        for quote in ('"', "'"):
+            with self.assertRaises(sv.SelectorSyntaxError):
+                self.compile_with_timeout('p:-soup-contains(' + quote + ('x' * 300))
+
+    def test_contains_escaped_quote(self):
+        """Test contains with an escaped quote at the start of an identifier does not time out."""
+
+        for quote in ('"', "'"):
+            self.compile_with_timeout('p:-soup-contains(\\' + quote + ('x' * 300) + ')')
